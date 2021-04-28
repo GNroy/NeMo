@@ -52,6 +52,10 @@ NeMo supports a variety of models that can be used for TTS.
      - :class:`SpectrogramGenerator<nemo.collections.tts.models.base.SpectrogramGenerator>`
      - https://ngc.nvidia.com/catalog/models/nvidia:nemo:tts_en_glowtts
      - Glow-based spectrogram generator
+   * - TalkNet
+     - :class:`SpectrogramGenerator<nemo.collections.tts.models.base.SpectrogramGenerator>`
+     - https://ngc.nvidia.com/catalog/models/nvidia:nemo:tts_en_talknet
+     - Fast convs-based spectrogram generator
    * - WaveGlow
      - :class:`Vocoder<nemo.collections.tts.models.base.Vocoder>`
      - https://ngc.nvidia.com/catalog/models/nvidia:nemo:tts_waveglow_88m
