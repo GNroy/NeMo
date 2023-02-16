@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import logging
 import os.path
 import shutil
 import tarfile
@@ -20,6 +21,7 @@ from os import mkdir
 from os.path import dirname, exists, getsize, join
 from pathlib import Path
 from shutil import rmtree
+from typing import Tuple
 
 import pytest
 
@@ -54,15 +56,6 @@ def pytest_addoption(parser):
         action='store_false',
         help="numba compatibility checks will be relaxed to just availability of cuda, "
         "without cuda compatibility matrix check",
-    )
-    parser.addoption(
-        '--tn_cache_dir',
-        type=str,
-        default=None,
-        help="path to a directory with .far grammars for CPU TN/ITN tests, (DEFAULT: None, i.e. no cache)",
-    )
-    parser.addoption(
-        '--run_audio_based', action='store_true', help="pass this argument to run audio-based TN tests",
     )
 
 
@@ -149,6 +142,33 @@ def extract_data_from_tar(test_dir, test_data_archive, url=None, local_data=Fals
     tar.close()
 
 
+@pytest.fixture(scope="session")
+def k2_is_appropriate() -> Tuple[bool, str]:
+    try:
+        from nemo.core.utils.k2_guard import k2  # noqa: E402
+
+        return True, "k2 is appropriate."
+    except Exception as e:
+        logging.exception(e, exc_info=True)
+        return False, "k2 is not available or does not meet the requirements."
+
+
+@pytest.fixture(scope="session")
+def k2_cuda_is_enabled(k2_is_appropriate) -> Tuple[bool, str]:
+    if not k2_is_appropriate[0]:
+        return k2_is_appropriate
+
+    import torch  # noqa: E402
+    from nemo.core.utils.k2_guard import k2  # noqa: E402
+
+    if torch.cuda.is_available() and k2.with_cuda:
+        return True, "k2 supports CUDA."
+    elif torch.cuda.is_available():
+        return False, "k2 does not support CUDA. Consider using a k2 build with CUDA support."
+    else:
+        return False, "k2 needs CUDA to be available in torch."
+
+
 def pytest_configure(config):
     """
     Initial configuration of conftest.
@@ -231,9 +251,3 @@ def pytest_configure(config):
 
         print("Setting numba compat :", config.option.relax_numba_compat)
         numba_utils.set_numba_compat_strictness(strict=config.option.relax_numba_compat)
-
-    # Set cache directory for TN/ITN tests
-    from .nemo_text_processing.utils import set_audio_based_tests, set_cache_dir
-
-    set_cache_dir(config.option.tn_cache_dir)
-    set_audio_based_tests(config.option.run_audio_based)
